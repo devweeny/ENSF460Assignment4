@@ -93,6 +93,29 @@ void IOinit() {
     
 }
 
+void sendMode0(uint16_t result) {
+    char bar[34] = "*";
+
+    int num = 32 * ((double) result / 0x3ff);
+    int i = 0;
+    for (i = 1; i < num + 1; i++) {
+        bar[i] = '*';
+    }
+    bar[i] = ' \0';
+
+    Disp2String("\033[2J"); // Clears the terminal
+    Disp2String("\033[H"); // Sets cursor to top left of terminal
+    Disp2String("Mode 0: ");
+    Disp2String(bar);
+    Disp2Hex(result);
+}
+    
+void sendMode1 (uint16_t result) {
+    Disp2Hex(result);
+    Disp2String("\r\n");
+}
+
+
 void IOcheck() {
     
     if (tmr3_event) { // Clock interrupt to run once a second
@@ -101,28 +124,25 @@ void IOcheck() {
         uint16_t result = do_ADC();
         
         if (mode == 0) {
-            char bar[34] = "*";
-
-            int num = 32 * ((double) result / 0x3ff);
-            int i = 0;
-            for (i = 1; i < num + 1; i++) {
-                bar[i] = '*';
-            }
-            bar[i] = ' \0';
-            
-            Disp2String("\033[2J"); // Clears the terminal
-            Disp2String("\033[H"); // Sets cursor to top left of terminal
-            Disp2String("Mode 0: ");
-            Disp2String(bar);
-            Disp2Hex(result);
+            // Mode 0 State
+            sendMode0(result);
         } else {
-            Disp2String("\r\n");
-            Disp2Hex(result);
+            // Mode 1 State
+            sendMode1(result);
         }
     }
 
     if (PB1_event) {
         mode ^= 1;
+        
+        T3CONbits.TON = 0;
+        if (mode == 1) {
+            PR3 = 490; // transmits data twice as fast to python program
+        } else {
+            PR3 = 980;
+        }
+        T3CONbits.TON = 1;
+
         PB1_event = 0;
     }
     Idle();
