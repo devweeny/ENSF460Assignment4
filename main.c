@@ -53,9 +53,11 @@
 #include <p24F16KA101.h>
 #include "clkChange.h"
 #include "UART2.h"
+#include "ADC.h"
 
-
-uint16_t PB3_event;
+uint8_t PB1_event;
+uint8_t tmr3_event;
+uint8_t mode;
 
 /**
  * You might find it useful to add your own #defines to improve readability here
@@ -102,7 +104,9 @@ int main(void) {
     CNEN2bits.CN30IE = 1;
     
     /* Let's clear some flags */
-    PB3_event = 0;
+    PB1_event = 0;
+    mode = 0;
+    tmr3_event = 0;
     
     IPC4bits.CNIP = 6;
     IFS1bits.CNIF = 0;
@@ -116,9 +120,15 @@ int main(void) {
         
         Idle();
         
-        if (PB3_event) {
-            Disp2String("PB3 event\n\r");
-            PB3_event = 0;
+        if (tmr3_event) { // Clock interrupt to run once a second
+            
+            uint16_t result = do_ADC();
+            tmr3_event = 0;
+        }
+        
+        if (PB1_event) {
+            mode ^= 1;
+            PB1_event = 0;
         }
     }
     
@@ -135,12 +145,12 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void){
 void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void){
     //Don't forget to clear the timer 2 interrupt flag!
     IFS0bits.T3IF = 0;
-    LATBbits.LATB8 ^= 1;
+    tmr3_event = 1;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _CNInterrupt(void){
     //Don't forget to clear the CN interrupt flag!
     IFS1bits.CNIF = 0;
 
-    PB3_event = 1;
+    PB1_event = !PB1;
 }

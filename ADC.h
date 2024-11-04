@@ -6,6 +6,8 @@
 #ifndef ADC_H
 #define	ADC_H
 
+#define PB1 PORTAbits.RA2
+
 uint16_t do_ADC(void);
         
 #include <xc.h> 
